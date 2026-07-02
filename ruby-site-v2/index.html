@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ルビ振り — 문장에 후리가나 달기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="./vendor/kuromoji/kuromoji.js" onerror="window.__kuromojiLoadFailed = true;"></script>
+<style>
+  :root {
+    --ink: #1c1c1c;
+    --paper: #f2ede1;
+    --paper-deep: #e8e0cf;
+    --card: #fbf9f3;
+    --hanko: #b23b2e;
+    --hanko-deep: #8f2e23;
+    --line: #c9bfa5;
+    --muted: #6b6252;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--paper);
+    background-image: radial-gradient(circle at 1px 1px, rgba(28,28,28,0.035) 1px, transparent 0);
+    background-size: 18px 18px;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--ink);
+    padding: 32px 16px 80px;
+  }
+  .container { max-width: 640px; margin: 0 auto; }
+  .header-top {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;
+  }
+  .eyebrow {
+    font-size: 0.72rem; letter-spacing: 0.18em; color: var(--muted);
+    font-family: 'Noto Sans JP', sans-serif; font-weight: 500;
+  }
+  .counter-wrap { display: flex; align-items: baseline; gap: 6px; }
+  .counter-num {
+    font-size: 1.15rem; font-weight: 700; color: var(--hanko-deep);
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .counter-label { font-size: 0.68rem; color: var(--muted); }
+  h1 {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 2rem; font-weight: 700; margin: 0 0 8px; letter-spacing: 0.01em;
+  }
+  .subtitle { margin: 0 0 28px; font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 4px;
+    padding: 20px; box-shadow: 0 1px 3px rgba(28,28,28,0.06);
+  }
+  textarea {
+    width: 100%; min-height: 84px; font-size: 1.05rem; line-height: 1.8;
+    padding: 12px 14px; border: 1px solid var(--line); border-radius: 3px;
+    background: var(--paper); color: var(--ink); resize: vertical;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  textarea::placeholder { color: #a89f8c; }
+  .action-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+  button {
+    font-family: 'Noto Sans JP', sans-serif; cursor: pointer; border: none;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--hanko); color: var(--card); border-radius: 3px;
+    padding: 10px 20px; font-size: 0.9rem; font-weight: 500;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--hanko-deep); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .hint { font-size: 0.72rem; color: var(--muted); }
+  .status-box {
+    margin-top: 14px; padding: 10px 14px; border-radius: 3px; font-size: 0.85rem;
+  }
+  .status-loading { background: #eee6d2; border: 1px solid var(--line); color: var(--muted); }
+  .status-error {
+    background: #f6e6e2; border: 1px solid var(--hanko); color: var(--hanko-deep);
+  }
+  .result-box { margin-top: 18px; padding-top: 18px; border-top: 1px dashed var(--line); }
+  .result-label { font-size: 0.7rem; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px; }
+  .ruby-line {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 3px;
+    padding: 20px 16px 12px; margin-bottom: 10px;
+    font-family: 'Noto Sans JP', sans-serif; font-weight: 400;
+    font-size: 1.5rem; line-height: 3.2; color: var(--ink);
+  }
+  .ruby-line rt {
+    font-family: 'Noto Sans JP', sans-serif; font-size: 0.82rem;
+    color: var(--hanko-deep); font-weight: 500;
+    text-align: center;
+  }
+  .ruby-list { margin-bottom: 16px; }
+  .result-actions { display: flex; justify-content: flex-end; }
+  .btn-stamp {
+    display: flex; align-items: center; gap: 8px; background: var(--hanko);
+    color: var(--card); border-radius: 3px; padding: 10px 18px; font-size: 0.88rem; font-weight: 500;
+  }
+  .btn-stamp:hover { background: var(--hanko-deep); }
+  .stamp-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--card);
+    font-family: 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 0.72rem; line-height: 1;
+  }
+  .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--line); color: var(--ink);
+    border-radius: 3px; padding: 9px 16px; font-size: 0.82rem;
+  }
+  .btn-ghost:hover { background: var(--paper-deep); }
+  .btn-ghost-subtle {
+    background: transparent; border: none; color: var(--muted); font-size: 0.78rem;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .export-box {
+    margin-top: 16px; padding: 16px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 4px; display: none;
+  }
+  .export-box.visible { display: block; }
+  .export-textarea {
+    width: 100%; min-height: 140px; margin-top: 10px; padding: 10px 12px;
+    font-family: 'Noto Sans JP', monospace; font-size: 0.78rem; line-height: 1.6;
+    border: 1px solid var(--line); border-radius: 3px; background: var(--paper); color: var(--ink);
+    resize: vertical;
+  }
+  .export-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .manage-box {
+    margin-top: 16px; padding: 16px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 4px; display: none;
+  }
+  .manage-box.visible { display: block; }
+  .manage-list-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 10px 4px; border-bottom: 1px solid var(--line);
+  }
+  .manage-list-item:last-child { border-bottom: none; }
+  .manage-item-text {
+    display: flex; flex-direction: column; gap: 3px; min-width: 0;
+  }
+  .manage-item-original {
+    font-size: 0.98rem; color: var(--ink); word-break: break-word;
+  }
+  .manage-item-ruby {
+    font-size: 0.8rem; color: var(--muted); word-break: break-word;
+  }
+  .manage-item-ruby ruby rt { font-size: 0.62em; }
+  .manage-delete-btn {
+    flex-shrink: 0; background: transparent; border: 1px solid var(--line);
+    color: var(--hanko-deep); border-radius: 3px; padding: 5px 10px; font-size: 0.75rem;
+  }
+  .manage-delete-btn:hover { background: #f6e6e2; border-color: var(--hanko); }
+  .manage-empty { font-size: 0.85rem; color: var(--muted); padding: 8px 4px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 4px;
+    font-size: 0.82rem; box-shadow: 0 4px 14px rgba(0,0,0,0.2); display: none; z-index: 10;
+  }
+  .toast.visible { display: block; animation: fadeUp 0.3s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  .fade-up { animation: fadeUp2 0.35s ease; }
+  @keyframes fadeUp2 { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) { .fade-up, .toast.visible { animation: none; } }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-top">
+      <span class="eyebrow">読書ノート</span>
+      <div class="counter-wrap">
+        <span class="counter-num" id="counterNum">0</span>
+        <span class="counter-label">문장 기록됨</span>
+      </div>
+    </div>
+    <h1>루비 확인</h1>
+    <p class="subtitle">일본어 문장을 붙여넣으면 모든 한자에 후리가나가 자동으로 붙어. 형태소 분석 기반이라 즉시, 무료로 동작해.</p>
+
+    <div class="card">
+      <textarea id="input" placeholder="彼は馴染みの店に行く。&#10;今日は雨が降っている。&#10;（엔터로 여러 문장을 구분해서 붙여넣어도 돼）" rows="5"></textarea>
+      <div class="action-row">
+        <button class="btn-primary" id="checkBtn" disabled>사전 로딩 중...</button>
+        <span class="hint">⌘/Ctrl + Enter</span>
+      </div>
+
+      <div id="statusBox"></div>
+
+      <div class="result-box fade-up" id="resultBox" style="display:none;">
+        <div class="result-label" id="resultLabel">독음</div>
+        <div class="ruby-list" id="rubyList"></div>
+        <div class="result-actions">
+          <button class="btn-stamp" id="saveBtn">
+            <span class="stamp-mark">記</span>
+            <span id="saveBtnText">기록하고 다음 문장으로</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn-ghost" id="exportBtn">TSV로 내보내기 (클립보드 복사)</button>
+      <div style="display:flex; gap:14px; align-items:center;">
+        <button class="btn-ghost-subtle" id="manageBtn">기록 관리</button>
+        <button class="btn-ghost-subtle" id="resetBtn">전체 초기화</button>
+      </div>
+    </div>
+
+    <div class="export-box" id="exportBox">
+      <div class="result-label">자동 복사가 막히면 아래 박스를 클릭해 전체 선택 후 직접 복사해줘</div>
+      <textarea class="export-textarea" id="exportTextarea" readonly></textarea>
+      <div class="export-actions">
+        <button class="btn-ghost" id="manualCopyBtn">전체 선택 + 복사 시도</button>
+        <button class="btn-ghost-subtle" id="closeExportBtn">닫기</button>
+      </div>
+    </div>
+
+    <div class="manage-box" id="manageBox">
+      <div class="result-label" id="manageLabel">기록된 문장</div>
+      <div id="manageList"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  const DICT_PATH = "./vendor/kuromoji/dict";
+  let tokenizer = null;
+  let currentBatch = []; // [{ original, annotated }]
+  let savedRows = JSON.parse(localStorage.getItem("rubyRows") || "[]");
+
+  const $ = (id) => document.getElementById(id);
+  const input = $("input");
+  const checkBtn = $("checkBtn");
+  const statusBox = $("statusBox");
+  const resultBox = $("resultBox");
+  const resultLabel = $("resultLabel");
+  const rubyList = $("rubyList");
+  const saveBtn = $("saveBtn");
+  const saveBtnText = $("saveBtnText");
+  const exportBtn = $("exportBtn");
+  const resetBtn = $("resetBtn");
+  const manageBtn = $("manageBtn");
+  const manageBox = $("manageBox");
+  const manageList = $("manageList");
+  const manageLabel = $("manageLabel");
+  const exportBox = $("exportBox");
+  const exportTextarea = $("exportTextarea");
+  const manualCopyBtn = $("manualCopyBtn");
+  const closeExportBtn = $("closeExportBtn");
+  const toast = $("toast");
+  const counterNum = $("counterNum");
+
+  let toastTimer = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("visible");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("visible"), 2200);
+  }
+
+  function updateCounter() {
+    counterNum.textContent = savedRows.length;
+  }
+  updateCounter();
+
+  // Kanji range check (CJK Unified Ideographs)
+  function isKanji(ch) {
+    const code = ch.codePointAt(0);
+    return (code >= 0x4e00 && code <= 0x9fff) || (code >= 0x3400 && code <= 0x4dbf);
+  }
+  function katakanaToHiragana(str) {
+    return str.replace(/[\u30a1-\u30f6]/g, (ch) =>
+      String.fromCharCode(ch.charCodeAt(0) - 0x60)
+    );
+  }
+
+  // Split a surface form into alternating kanji-run / non-kanji-run segments.
+  // e.g. "立ち止まっ" -> [{立,kanji}, {ち,kana}, {止,kanji}, {まっ,kana}]
+  function splitSegments(surface) {
+    const segs = [];
+    let i = 0;
+    while (i < surface.length) {
+      const isK = isKanji(surface[i]);
+      let j = i + 1;
+      while (j < surface.length && isKanji(surface[j]) === isK) j++;
+      segs.push({ text: surface.slice(i, j), isKanji: isK });
+      i = j;
+    }
+    return segs;
+  }
+
+  // Annotate one token: handles multiple kanji runs within a single token
+  // (compound verbs like 立ち止まる, 話し合う, 見つけ出す) by aligning each
+  // kanji run against the portion of the whole-token reading between kana anchors.
+  function annotateToken(surface, readingKatakana) {
+    const segs = splitSegments(surface);
+    const kanjiSegCount = segs.filter((s) => s.isKanji).length;
+    if (kanjiSegCount === 0) return surface;
+
+    const reading = katakanaToHiragana(readingKatakana || surface);
+
+    let readingPos = 0;
+    let result = "";
+    for (let idx = 0; idx < segs.length; idx++) {
+      const seg = segs[idx];
+      if (!seg.isKanji) {
+        const found = reading.indexOf(seg.text, readingPos);
+        if (found === -1) return fallbackSingleRuby(surface, reading);
+        result += seg.text;
+        readingPos = found + seg.text.length;
+      } else {
+        let nextKanaText = null;
+        for (let k = idx + 1; k < segs.length; k++) {
+          if (!segs[k].isKanji) { nextKanaText = segs[k].text; break; }
+        }
+        let endPos;
+        if (nextKanaText) {
+          const found = reading.indexOf(nextKanaText, readingPos);
+          endPos = found === -1 ? reading.length : found;
+        } else {
+          endPos = reading.length;
+        }
+        const kanjiReading = reading.slice(readingPos, endPos);
+        if (!kanjiReading) return fallbackSingleRuby(surface, reading);
+        result += `<ruby>${seg.text}<rt>${kanjiReading}</rt></ruby>`;
+        readingPos = endPos;
+      }
+    }
+    return result;
+  }
+
+  function fallbackSingleRuby(surface, reading) {
+    return `<ruby>${surface}<rt>${reading}</rt></ruby>`;
+  }
+
+  function annotateSentence(sentence) {
+    const tokens = tokenizer.tokenize(sentence);
+    return tokens.map((t) => annotateToken(t.surface_form, t.reading)).join("");
+  }
+
+  function handleCheck() {
+    const rawLines = input.value.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+    if (rawLines.length === 0 || !tokenizer) return;
+    statusBox.innerHTML = "";
+    try {
+      currentBatch = rawLines.map((line) => ({
+        original: line,
+        annotated: annotateSentence(line),
+      }));
+      renderBatch();
+      resultBox.style.display = "block";
+    } catch (err) {
+      statusBox.innerHTML = `<div class="status-box status-error">확인하지 못했어. ${err.message} — 다시 시도해봐.</div>`;
+      resultBox.style.display = "none";
+    }
+  }
+
+  function renderBatch() {
+    resultLabel.textContent = currentBatch.length > 1 ? `독음 (문장 ${currentBatch.length}개)` : "독음";
+    rubyList.innerHTML = currentBatch
+      .map((item) => `<div class="ruby-line">${item.annotated}</div>`)
+      .join("");
+    saveBtnText.textContent = currentBatch.length > 1
+      ? `${currentBatch.length}개 모두 기록하고 다음으로`
+      : "기록하고 다음 문장으로";
+  }
+
+  function handleSave() {
+    if (currentBatch.length === 0) return;
+    for (const item of currentBatch) {
+      savedRows.push(`${item.original}\t${item.annotated}`);
+    }
+    localStorage.setItem("rubyRows", JSON.stringify(savedRows));
+    updateCounter();
+    showToast(`저장됨 (총 ${savedRows.length}개)`);
+    input.value = "";
+    currentBatch = [];
+    resultBox.style.display = "none";
+    input.focus();
+    if (manageBox.classList.contains("visible")) renderManageList();
+  }
+
+  async function handleExport() {
+    if (savedRows.length === 0) {
+      showToast("저장된 문장이 없습니다");
+      return;
+    }
+    const tsv = savedRows.join("\n");
+    let copied = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(tsv);
+        copied = true;
+      }
+    } catch {
+      copied = false;
+    }
+    if (copied) {
+      showToast(`${savedRows.length}개 문장을 클립보드에 복사했습니다`);
+      exportBox.classList.remove("visible");
+    } else {
+      exportTextarea.value = tsv;
+      exportBox.classList.add("visible");
+      showToast(`${savedRows.length}개 문장 - 아래 박스에서 직접 복사해줘`);
+    }
+  }
+
+  function handleManualCopy() {
+    exportTextarea.focus();
+    exportTextarea.select();
+    try {
+      const ok = document.execCommand("copy");
+      showToast(ok ? "복사되었습니다" : "선택된 텍스트를 Ctrl/Cmd+C로 복사해줘");
+    } catch {
+      showToast("선택된 텍스트를 Ctrl/Cmd+C로 복사해줘");
+    }
+  }
+
+  function handleReset() {
+    savedRows = [];
+    localStorage.setItem("rubyRows", "[]");
+    updateCounter();
+    showToast("초기화되었습니다");
+    exportBox.classList.remove("visible");
+    if (manageBox.classList.contains("visible")) renderManageList();
+  }
+
+  function renderManageList() {
+    manageLabel.textContent = savedRows.length > 0
+      ? `기록된 문장 (${savedRows.length}개)`
+      : "기록된 문장";
+
+    if (savedRows.length === 0) {
+      manageList.innerHTML = `<div class="manage-empty">아직 기록된 문장이 없어.</div>`;
+      return;
+    }
+
+    manageList.innerHTML = savedRows
+      .map((row, idx) => {
+        const [original, annotated] = row.split("\t");
+        return `
+          <div class="manage-list-item" data-idx="${idx}">
+            <div class="manage-item-text">
+              <div class="manage-item-original"></div>
+              <div class="manage-item-ruby">${annotated || ""}</div>
+            </div>
+            <button class="manage-delete-btn" data-idx="${idx}">삭제</button>
+          </div>
+        `;
+      })
+      .join("");
+
+    // Set original text via textContent to avoid HTML injection from stored data
+    const items = manageList.querySelectorAll(".manage-list-item");
+    items.forEach((el) => {
+      const idx = Number(el.dataset.idx);
+      const [original] = savedRows[idx].split("\t");
+      el.querySelector(".manage-item-original").textContent = original;
+    });
+
+    manageList.querySelectorAll(".manage-delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.idx);
+        savedRows.splice(idx, 1);
+        localStorage.setItem("rubyRows", JSON.stringify(savedRows));
+        updateCounter();
+        renderManageList();
+        showToast("삭제되었습니다");
+      });
+    });
+  }
+
+  function handleToggleManage() {
+    const isVisible = manageBox.classList.toggle("visible");
+    if (isVisible) {
+      exportBox.classList.remove("visible");
+      renderManageList();
+    }
+  }
+
+  checkBtn.addEventListener("click", handleCheck);
+  saveBtn.addEventListener("click", handleSave);
+  exportBtn.addEventListener("click", handleExport);
+  resetBtn.addEventListener("click", handleReset);
+  manageBtn.addEventListener("click", handleToggleManage);
+  manualCopyBtn.addEventListener("click", handleManualCopy);
+  closeExportBtn.addEventListener("click", () => exportBox.classList.remove("visible"));
+
+  input.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      if (currentBatch.length > 0 && resultBox.style.display === "block") {
+        handleSave();
+      } else {
+        handleCheck();
+      }
+    }
+  });
+  input.addEventListener("input", () => {
+    checkBtn.disabled = !input.value.trim() || !tokenizer;
+  });
+
+  // Load kuromoji dictionary
+  checkBtn.textContent = "사전 로딩 중...";
+
+  if (window.__kuromojiLoadFailed || typeof kuromoji === "undefined") {
+    statusBox.innerHTML = `<div class="status-box status-error">형태소 분석 라이브러리를 불러오지 못했어. 페이지를 새로고침해봐. 계속되면 인터넷 연결이나 파일 경로를 확인해줘.</div>`;
+    checkBtn.textContent = "로딩 실패";
+  } else {
+    const loadTimeout = setTimeout(() => {
+      statusBox.innerHTML = `<div class="status-box status-error">사전 로딩이 예상보다 오래 걸리고 있어. 네트워크가 느리거나 파일을 찾지 못하고 있을 수 있어. 페이지를 새로고침해봐.</div>`;
+    }, 15000);
+
+    kuromoji.builder({ dicPath: DICT_PATH }).build((err, builtTokenizer) => {
+      clearTimeout(loadTimeout);
+      if (err) {
+        statusBox.innerHTML = `<div class="status-box status-error">사전 로딩에 실패했어. (${err.message || err})</div>`;
+        checkBtn.textContent = "로딩 실패";
+        return;
+      }
+      tokenizer = builtTokenizer;
+      statusBox.innerHTML = "";
+      checkBtn.textContent = "독음 확인";
+      checkBtn.disabled = !input.value.trim();
+    });
+  }
+</script>
+</body>
+</html>
